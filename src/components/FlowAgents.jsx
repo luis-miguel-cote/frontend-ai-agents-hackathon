@@ -2,6 +2,8 @@ import { useState } from "react";
 import ReactFlow from "reactflow";
 import "reactflow/dist/style.css";
 import "../styles/FlowAgents.css";
+import LogsPanel from "./LogsPanel";
+
 const initialNodes = [
   { id: "1", data: { label: "👤 User" }, position: { x: 0, y: 100 } },
   { id: "2", data: { label: "🧠 Orchestrator" }, position: { x: 200, y: 100 } },
@@ -20,10 +22,15 @@ const initialEdges = [
   { id: "e5-6", source: "5", target: "6", animated: true },
 ];
 
-function FlowAgents() {
+function FlowAgents({ inputData }) {
   const [nodes, setNodes] = useState(initialNodes);
+  const [logs, setLogs] = useState([]);
 
   const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+
+  const addLog = (message, type = "info") => {
+    setLogs((prev) => [...prev, { message, type }]);
+  };
 
   const updateNodeStatus = (id, status) => {
     setNodes((nds) =>
@@ -60,30 +67,59 @@ function FlowAgents() {
   };
 
   const runSimulation = async () => {
-    // reset estados
+    // reset primero
     setNodes(initialNodes);
+    setLogs([]);
 
-    await delay(500);
+    // input del usuario
+    if (inputData?.text) {
+      addLog(
+        `Requerimiento recibido: ${inputData.text.slice(0, 120)}...`,
+        "info"
+      );
+    }
+
+    if (inputData?.fileName) {
+      addLog(`Archivo recibido: ${inputData.fileName}`, "info");
+    }
+
+    addLog("Recibiendo requerimiento del usuario...", "info");
+    await delay(800);
 
     updateNodeStatus("2", "processing");
+    addLog("Orchestrator analizando tarea...", "agent");
     await delay(1200);
     updateNodeStatus("2", "done");
 
     updateNodeStatus("3", "processing");
+    addLog("Generando especificaciones...", "agent");
     await delay(1200);
     updateNodeStatus("3", "done");
 
     updateNodeStatus("4", "processing");
+    addLog("Developer generando código...", "agent");
     await delay(1200);
     updateNodeStatus("4", "done");
 
     updateNodeStatus("5", "processing");
+    addLog("QA ejecutando pruebas...", "agent");
     await delay(1200);
+
+    // 🔴 ERROR SIMULADO
+    addLog("Error detectado en validación ❌", "error");
+    await delay(1000);
+
+    addLog("Reintentando proceso...", "info");
+    await delay(1000);
+
     updateNodeStatus("5", "done");
 
     updateNodeStatus("6", "processing");
+    addLog("Generando salida final...", "agent");
     await delay(1200);
+
     updateNodeStatus("6", "done");
+    addLog("Sistema completado correctamente ✅", "success");
   };
 
   return (
@@ -115,6 +151,9 @@ function FlowAgents() {
       >
         <ReactFlow nodes={nodes} edges={initialEdges} fitView />
       </div>
+
+      {/* LOGS */}
+      <LogsPanel logs={logs} />
     </div>
   );
 }

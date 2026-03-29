@@ -7,7 +7,7 @@ function Footer() {
       marginTop: "20px"
     }}>
       <p>🚀 Hackathon 2026 - AI Multi-Agent System</p>
-      <small>By Luis Miguel</small>
+      <small>By ParchAI</small>
     </div>
   );
 }

@@ -1,45 +1,51 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import "../styles/login.css";
+import logo from "../assets/logo.png";
 function Login() {
-  const [email, setEmail] = useState("");
-  const navigate = useNavigate();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const navigate = useNavigate();
 
-  const handleLogin = (e) => {
-    e.preventDefault();
+    const handleLogin = (e) => {
+        e.preventDefault();
 
-    if (email) {
-      localStorage.setItem("user", email);
-      navigate("/dashboard");
-    }
-  };
+        if (email === "admin@test.com" && password === "1234") {
+            localStorage.setItem("user", email);
+            navigate("/dashboard");
+        } else {
+            alert("Credenciales incorrectas");
+        }
+    };
 
-  return (
-    <div style={{
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      height: "100vh"
-    }}>
-      <form onSubmit={handleLogin} style={{
-        background: "#1e293b",
-        padding: "40px",
-        borderRadius: "12px"
-      }}>
-        <h2>Login</h2>
+    return (
+        <div className="container">
+            <form onSubmit={handleLogin} className="card">
+                <img src={logo} alt="logo" className="logo" />
+                <div className="title">ParchAI</div>
 
-        <input
-          type="email"
-          placeholder="Correo"
-          onChange={(e) => setEmail(e.target.value)}
-        />
+                <input
+                    type="email"
+                    placeholder="Correo"
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="input"
+                />
 
-        <br /><br />
+                <input
+                    type="password"
+                    placeholder="Contraseña"
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="input"
+                />
 
-        <button type="submit">Ingresar</button>
-      </form>
-    </div>
-  );
+                <button type="submit" className="button">
+                    Ingresar
+                </button>
+
+                <small>demo: admin@test.com / 1234</small>
+            </form>
+        </div>
+    );
 }
 
 export default Login;

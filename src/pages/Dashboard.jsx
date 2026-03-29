@@ -1,12 +1,12 @@
 import MainLayout from "../layout/MainLayout";
+import FlowAgents from "../components/FlowAgents";
 
 function Dashboard() {
-  const user = localStorage.getItem("user");
-
   return (
     <MainLayout>
-      <h1>Bienvenido {user}</h1>
-      <p>Simulación de equipo de desarrollo con IA</p>
+      <h1>🤖 AI Multi-Agent System</h1>
+
+      <FlowAgents />
     </MainLayout>
   );
 }

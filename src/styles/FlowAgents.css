@@ -1,0 +1,31 @@
+.react-flow__node {
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 12px;
+  background: #020617;
+  color: white;
+  border: 1px solid rgba(34, 211, 238, 0.3);
+}
+
+/* glow general */
+.react-flow__node-default {
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
+}
+
+/* edges (líneas) */
+.react-flow__edge-path {
+  stroke: #22d3ee;
+  stroke-width: 2;
+}
+
+/* animación más visible */
+.react-flow__edge.animated path {
+  stroke-dasharray: 5;
+  animation: dash 1s linear infinite;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -10;
+  }
+}

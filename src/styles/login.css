@@ -1,0 +1,90 @@
+.container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at top, #020617, #020617);
+  overflow: hidden;
+}
+
+/* glow futurista */
+.container::before {
+  content: "";
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: #22d3ee;
+  filter: blur(150px);
+  opacity: 0.15;
+}
+
+/* tarjeta */
+.card {
+  position: relative;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(20px);
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 0 60px rgba(0,0,0,0.8);
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  gap: 15px;
+  text-align: center;
+  border: 1px solid rgba(34, 211, 238, 0.2);
+}
+
+.logo {
+  width: 120px;
+  margin: 0 auto 10px;
+}
+
+.title {
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+.input {
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  background: #020617;
+  color: white; /* 🔥 ESTO FALTABA */
+  border: 1px solid rgba(34, 211, 238, 0.3);
+    font-size: 14px;
+  letter-spacing: 0.5px;
+}
+.input::placeholder {
+  color: #94a3b8; /* gris claro */
+}
+
+.input:focus {
+  outline: none;
+  border: 1px solid #22d3ee;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+}
+
+/* botón estilo neon */
+.button {
+  background: linear-gradient(135deg, #22d3ee, #4ade80);
+  color: #020617;
+}
+.button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px #22d3ee;
+}
+.logo {
+  width: 140px;  /* antes estaba pequeño */
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
+}
+.logo {
+  filter: drop-shadow(0 0 12px #22d3ee)
+          drop-shadow(0 0 25px #4ade80);
+}
+
+.title {
+  font-size: 22px;
+  font-weight: bold;
+  color: #22d3ee;
+  margin-bottom: 10px;
+}

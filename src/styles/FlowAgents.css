@@ -23,7 +23,35 @@
   stroke-dasharray: 5;
   animation: dash 1s linear infinite;
 }
+.run-button {
+  margin-bottom: 15px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  background: linear-gradient(135deg, #22d3ee, #4ade80);
+  transition: all 0.3s ease;
+}
 
+/* hover */
+.run-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);
+}
+
+/* deshabilitado */
+.run-button:disabled {
+  background: #334155;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
 @keyframes dash {
   to {
     stroke-dashoffset: -10;

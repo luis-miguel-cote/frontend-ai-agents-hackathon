@@ -3,7 +3,7 @@ import ReactFlow from "reactflow";
 import "reactflow/dist/style.css";
 import "../styles/FlowAgents.css";
 import LogsPanel from "./LogsPanel";
-
+import OutputPanel from "./OutputPanel";
 const initialNodes = [
   { id: "1", data: { label: "👤 User" }, position: { x: 0, y: 100 } },
   { id: "2", data: { label: "🧠 Orchestrator" }, position: { x: 200, y: 100 } },
@@ -25,7 +25,8 @@ const initialEdges = [
 function FlowAgents({ inputData }) {
   const [nodes, setNodes] = useState(initialNodes);
   const [logs, setLogs] = useState([]);
-
+  const [output, setOutput] = useState(null);
+  const [loading, setLoading] = useState(false);
   const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
   const addLog = (message, type = "info") => {
@@ -70,7 +71,8 @@ function FlowAgents({ inputData }) {
     // reset primero
     setNodes(initialNodes);
     setLogs([]);
-
+    setOutput(null);
+    setLoading(true);
     // input del usuario
     if (inputData?.text) {
       addLog(
@@ -120,26 +122,35 @@ function FlowAgents({ inputData }) {
 
     updateNodeStatus("6", "done");
     addLog("Sistema completado correctamente ✅", "success");
+    const generatedOutput = `
+# Código generado (simulación)
+
+API Flask:
+
+@app.route('/users', methods=['GET'])
+def get_users():
+    return {"users": []}
+
+# Resultado:
+- Sistema CRUD básico
+- Autenticación pendiente
+- Validación implementada
+`;
+
+setOutput(generatedOutput);
+setLoading(false);
   };
 
   return (
     <div>
       {/* BOTÓN */}
-      <button
-        onClick={runSimulation}
-        style={{
-          marginBottom: "15px",
-          padding: "10px 20px",
-          borderRadius: "8px",
-          border: "none",
-          background: "linear-gradient(135deg, #22d3ee, #4ade80)",
-          cursor: "pointer",
-          fontWeight: "bold",
-        }}
-      >
-        ▶ Ejecutar simulación
-      </button>
-
+<button
+  onClick={runSimulation}
+  disabled={loading}
+  className="run-button"
+>
+  {loading ? "⏳ Procesando..." : "▶ Ejecutar simulación"}
+</button>
       {/* FLOW */}
       <div
         style={{
@@ -154,6 +165,7 @@ function FlowAgents({ inputData }) {
 
       {/* LOGS */}
       <LogsPanel logs={logs} />
+<OutputPanel output={output} />
     </div>
   );
 }

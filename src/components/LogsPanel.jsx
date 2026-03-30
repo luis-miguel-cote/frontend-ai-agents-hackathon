@@ -1,13 +1,15 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "../styles/LogsPanel.css";
-
 function LogsPanel({ logs }) {
   const endRef = useRef(null);
+  const [hasAutoScrolled, setHasAutoScrolled] = useState(false);
 
-  // auto scroll
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logs]);
+    if (!hasAutoScrolled && logs.length > 0) {
+      endRef.current?.scrollIntoView({ behavior: "smooth" });
+      setHasAutoScrolled(true); // 🔥 solo una vez
+    }
+  }, [logs, hasAutoScrolled]);
 
   return (
     <div className="logs-container">

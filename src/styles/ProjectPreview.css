@@ -1,0 +1,82 @@
+.preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.preview-modal {
+  display: flex;
+  flex-direction: column;
+  width: 70vw;
+  height: 70vh;
+  background: #0f172a;
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(34, 211, 238, 0.15);
+  transition: all 0.3s ease;
+}
+
+.preview-fullscreen .preview-modal {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #020617;
+  border-bottom: 1px solid rgba(34, 211, 238, 0.2);
+}
+
+.preview-header h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #e2e8f0;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.preview-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 6px;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 16px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.preview-btn:hover {
+  background: rgba(34, 211, 238, 0.15);
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.3);
+}
+
+.preview-close:hover {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+.preview-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: #fff;
+}

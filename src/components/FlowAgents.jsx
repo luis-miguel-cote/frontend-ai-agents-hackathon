@@ -4,6 +4,7 @@ import "reactflow/dist/style.css";
 import "../styles/FlowAgents.css";
 import LogsPanel from "./LogsPanel";
 import OutputPanel from "./OutputPanel";
+import ProjectPreview from "./ProjectPreview";
 import {
   startProject,
   answerProjectQuestions,
@@ -41,6 +42,8 @@ function FlowAgents({ inputData }) {
   const [progress, setProgress] = useState({ fase: "Esperando", porcentaje: 0, archivos_listos: [] });
   const [resultado, setResultado] = useState(null);
   const [error, setError] = useState(null);
+  const [rutaProyecto, setRutaProyecto] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
   const pollRef = useRef(null);
   const lastFaseRef = useRef("");
 
@@ -61,6 +64,8 @@ function FlowAgents({ inputData }) {
     setGenerating(false);
     setProgress({ fase: "Esperando", porcentaje: 0, archivos_listos: [] });
     setResultado(null);
+    setRutaProyecto(null);
+    setShowPreview(false);
     setError(null);
     setLogs([]);
     setNodes(initialNodes);
@@ -208,7 +213,9 @@ function FlowAgents({ inputData }) {
           if (status.estado === "completado") {
             clearInterval(pollRef.current);
             pollRef.current = null;
-            setResultado(status.resultado || null);
+            const res = status.resultado || null;
+            setResultado(res);
+            setRutaProyecto(status.ruta_proyecto || res?.nombre || null);
             setGenerating(false);
             addLog("Generación completada ✅", "success");
           }
@@ -350,6 +357,11 @@ function FlowAgents({ inputData }) {
         <button onClick={resetWorkflow} disabled={generating} className="run-button">
           🔄 Reiniciar flujo
         </button>
+        {rutaProyecto && (
+          <button onClick={() => setShowPreview(true)} className="run-button">
+            👁 Ver preview
+          </button>
+        )}
       </div>
 
       {renderQuestions()}
@@ -368,6 +380,13 @@ function FlowAgents({ inputData }) {
 
       <LogsPanel logs={logs} />
       <OutputPanel output={resultado ? JSON.stringify(resultado, null, 2) : ""} loading={generating} />
+
+      {showPreview && rutaProyecto && (
+        <ProjectPreview
+          projectName={rutaProyecto}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </div>
   );
 }

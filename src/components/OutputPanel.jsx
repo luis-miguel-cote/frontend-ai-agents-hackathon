@@ -6,7 +6,7 @@ function OutputPanel({ resultado, rutaProyecto, loading }) {
     : null;
 
   return (
-    <section className="section-card" style={{ marginTop: '20px' }}>
+    <section className="section-card">
       <div className="card-header">
         <div>
           <p className="section-label">Output del sistema</p>

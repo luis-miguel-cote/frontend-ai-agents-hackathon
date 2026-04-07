@@ -1,76 +1,136 @@
 import { useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import mammoth from "mammoth";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+import Tesseract from "tesseract.js";
+import "pdfjs-dist/build/pdf.worker.js";
+pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + "/node_modules/pdfjs-dist/build/pdf.worker.js";
 
 function InputPanel({ onSubmit }) {
     const [text, setText] = useState("");
     const [fileName, setFileName] = useState("");
+    const [fileUploaded, setFileUploaded] = useState(false);
+    const [extractStatus, setExtractStatus] = useState(null); // null | 'success' | 'warning' | 'error'
+    const [extractMsg, setExtractMsg] = useState("");
+
 
     const handleFile = async (file) => {
         if (!file) return;
-
         setFileName(file.name);
+        setFileUploaded(true);
 
         const extension = file.name.split(".").pop().toLowerCase();
 
+
         // 📄 PDF
         if (extension === "pdf") {
+            setExtractStatus(null);
+            setExtractMsg("");
             const reader = new FileReader();
-
             reader.onload = async function () {
-                const typedArray = new Uint8Array(this.result);
-                const pdf = await pdfjsLib.getDocument(typedArray).promise;
-
-                let extractedText = "";
-
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const content = await page.getTextContent();
-                    const strings = content.items.map((item) => item.str);
-                    extractedText += strings.join(" ") + "\n";
+                try {
+                    const typedArray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                    let extractedText = "";
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        const strings = content.items.map((item) => item.str);
+                        extractedText += strings.join(" ") + "\n";
+                    }
+                    setText(extractedText);
+                    if (extractedText.trim().length > 0) {
+                        setExtractStatus('success');
+                        setExtractMsg('Texto extraído correctamente del PDF.');
+                    } else {
+                        setExtractStatus('warning');
+                        setExtractMsg('No se pudo extraer texto del PDF. ¿El archivo contiene texto seleccionable?');
+                    }
+                } catch (err) {
+                    setText("");
+                    setExtractStatus('error');
+                    setExtractMsg('Error al leer el PDF: ' + err.message);
                 }
-
-                onSubmit({ text: extractedText, fileName: file.name });
             };
-
             reader.readAsArrayBuffer(file);
         }
+
 
         // 📘 WORD (.docx)
         else if (extension === "docx") {
+            setExtractStatus(null);
+            setExtractMsg("");
             const reader = new FileReader();
-
             reader.onload = async function () {
-                const result = await mammoth.extractRawText({
-                    arrayBuffer: this.result,
-                });
-
-                onSubmit({ text: result.value, fileName: file.name });
+                try {
+                    const result = await mammoth.extractRawText({
+                        arrayBuffer: this.result,
+                    });
+                    setText(result.value);
+                    if (result.value && result.value.trim().length > 0) {
+                        setExtractStatus('success');
+                        setExtractMsg('Texto extraído correctamente del DOCX.');
+                    } else {
+                        setExtractStatus('warning');
+                        setExtractMsg('No se pudo extraer texto del DOCX.');
+                    }
+                } catch (err) {
+                    setText("");
+                    setExtractStatus('error');
+                    setExtractMsg('Error al leer el DOCX: ' + err.message);
+                }
             };
-
             reader.readAsArrayBuffer(file);
         }
 
+
         // 📝 TXT
         else if (extension === "txt") {
+            setExtractStatus(null);
+            setExtractMsg("");
             const reader = new FileReader();
-
             reader.onload = function () {
-                onSubmit({ text: this.result, fileName: file.name });
+                setText(this.result);
+                if (this.result && this.result.trim().length > 0) {
+                    setExtractStatus('success');
+                    setExtractMsg('Texto extraído correctamente del TXT.');
+                } else {
+                    setExtractStatus('warning');
+                    setExtractMsg('No se pudo extraer texto del archivo TXT.');
+                }
             };
-
             reader.readAsText(file);
         }
 
-        // 🖼️ IMAGEN (simulado)
+
+
+        // 🖼️ IMAGEN (OCR real)
         else if (["png", "jpg", "jpeg"].includes(extension)) {
-            onSubmit({
-                text: "Texto detectado desde imagen (simulación OCR)",
-                fileName: file.name,
-            });
+            setExtractStatus(null);
+            setExtractMsg("Procesando imagen con OCR...");
+            setText("Procesando imagen con OCR...");
+            const reader = new FileReader();
+            reader.onload = async function () {
+                try {
+                    const { data: { text: ocrText } } = await Tesseract.recognize(
+                        this.result,
+                        "spa+eng", // Español e inglés
+                        { logger: m => console.log(m) }
+                    );
+                    setText(ocrText || "No se detectó texto en la imagen");
+                    if (ocrText && ocrText.trim().length > 0) {
+                        setExtractStatus('success');
+                        setExtractMsg('Texto extraído correctamente de la imagen.');
+                    } else {
+                        setExtractStatus('warning');
+                        setExtractMsg('No se detectó texto en la imagen.');
+                    }
+                } catch (err) {
+                    setText("");
+                    setExtractStatus('error');
+                    setExtractMsg('Error al procesar la imagen con OCR: ' + err.message);
+                }
+            };
+            reader.readAsDataURL(file);
         }
 
         else {
@@ -78,16 +138,24 @@ function InputPanel({ onSubmit }) {
         }
     };
 
+
+
     const handleSubmit = (e) => {
         e.preventDefault();
-
-        if (!text) {
-            alert("Ingresa texto o sube un archivo");
+        // Validar que haya texto no vacío
+        if ((!text || text.trim().length === 0) && !fileUploaded) {
+            alert("Por favor ingresa texto o sube un archivo con los requerimientos");
             return;
         }
-
-        onSubmit({ text });
+        if (text && text.trim().length === 0) {
+            alert("El texto extraído o ingresado está vacío. Por favor revisa el archivo o ingresa texto manualmente.");
+            return;
+        }
+        onSubmit({ text: text.trim(), fileName: fileName || "manual-input" });
     };
+
+    const isReadyToSubmit = (text && text.trim().length > 0) || fileUploaded;
+
 
     return (
         <section className="section-card" style={{ marginBottom: "24px" }}>
@@ -107,12 +175,41 @@ function InputPanel({ onSubmit }) {
             </div>
 
             <form onSubmit={handleSubmit} className="panel-grid">
-                <textarea
-                    className="textarea-field"
-                    placeholder="Describe el requerimiento..."
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                />
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                }}>
+                    <textarea
+                        className="textarea-field"
+                        placeholder="Describe el requerimiento o sube un archivo..."
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                    />
+
+                    {fileUploaded && fileName && (
+                        <div style={{
+                            padding: '12px 14px',
+                            borderRadius: '12px',
+                            background: extractStatus === 'success' ? 'rgba(74, 222, 128, 0.08)' : extractStatus === 'warning' ? 'rgba(251, 191, 36, 0.08)' : extractStatus === 'error' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(74, 222, 128, 0.08)',
+                            border: extractStatus === 'success' ? '1px solid rgba(74, 222, 128, 0.25)' : extractStatus === 'warning' ? '1px solid #fbbf24' : extractStatus === 'error' ? '1px solid #ef4444' : '1px solid rgba(74, 222, 128, 0.25)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            color: extractStatus === 'success' ? '#4ade80' : extractStatus === 'warning' ? '#fbbf24' : extractStatus === 'error' ? '#ef4444' : '#4ade80',
+                            fontSize: '0.95rem',
+                            marginTop: '4px'
+                        }}>
+                            <span style={{fontSize: '1.2em'}}>
+                                {extractStatus === 'success' ? '✔' : extractStatus === 'warning' ? '⚠️' : extractStatus === 'error' ? '✖' : '✔'}
+                            </span>
+                            <span>
+                                Archivo: <strong>{fileName}</strong><br/>
+                                {extractMsg}
+                            </span>
+                        </div>
+                    )}
+                </div>
 
                 <div className="layout-grid columns-2" style={{ alignItems: "end" }}>
                     <label className="file-input">
@@ -130,7 +227,7 @@ function InputPanel({ onSubmit }) {
                         />
                     </label>
 
-                    <button type="submit" className="button button-primary">
+                    <button type="submit" disabled={!isReadyToSubmit} className="button button-primary">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <line x1="22" y1="2" x2="11" y2="13" />
                           <polygon points="22 2 15 22 11 13 2 9 22 2" />
@@ -140,10 +237,8 @@ function InputPanel({ onSubmit }) {
                 </div>
 
                 <p className="helper-text">
-                    Formatos soportados: PDF, Word (.docx), TXT, JPG, PNG.
+                    Formatos soportados: PDF, Word (.docx), TXT, JPG, PNG. {fileUploaded && text ? 'El archivo se ha cargado correctamente.' : ''}
                 </p>
-
-                {fileName && <p className="file-label">Archivo seleccionado: {fileName}</p>}
             </form>
         </section>
     );

@@ -35,6 +35,8 @@ function FlowAgents({ inputData }) {
   const [showPreview, setShowPreview] = useState(false);
   const pollRef = useRef(null);
   const lastFaseRef = useRef("");
+  const questionsRef = useRef(null);
+  const newQuestionsRef = useRef(false);
 
   // Función para recargar pipeline
   const fetchPipeline = (showLoading = true) => {
@@ -81,6 +83,14 @@ function FlowAgents({ inputData }) {
       }
     };
   }, []);
+
+  // Auto-scroll a nuevas preguntas
+  useEffect(() => {
+    if (newQuestionsRef.current && questionsRef.current) {
+      questionsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      newQuestionsRef.current = false;
+    }
+  }, [preguntas]);
 
   const resetWorkflow = () => {
     setSessionId(null);
@@ -156,8 +166,9 @@ function FlowAgents({ inputData }) {
     }
   };
 
+
   const handleStart = async () => {
-    if (!inputData?.text) {
+    if (!(inputData?.text && inputData.text.trim().length > 0) && !inputData?.fileName) {
       alert("Ingresa texto o sube un archivo antes de ejecutar la simulación.");
       return;
     }
@@ -195,10 +206,32 @@ function FlowAgents({ inputData }) {
     event.preventDefault();
     if (!sessionId) return;
 
+    // Validar que todas las preguntas tengan respuestas
+    for (let i = 0; i < preguntas.length; i++) {
+      if (!answers[i] || answers[i].trim() === "") {
+        alert(`Por favor responde la pregunta ${i + 1}`);
+        return;
+      }
+    }
+
     setError(null);
     addLog("Enviando respuestas al backend...", "info");
     try {
-      const response = await answerProjectQuestions(sessionId, answers);
+      // Convertir respuestas a objeto {"0": "respuesta1", ...}
+      const respuestasObj = {};
+      preguntas.forEach((_, index) => {
+        respuestasObj[String(index)] = answers[index] || "";
+      });
+      const response = await answerProjectQuestions(sessionId, respuestasObj);
+      
+      // Limpiar respuestas después de enviar
+      setAnswers({});
+      
+      // Establecer nuevas preguntas y marcar que hay nuevas
+      if (response.preguntas && response.preguntas.length > 0) {
+        newQuestionsRef.current = true;
+      }
+      
       setPreguntas(response.preguntas || []);
       setReadyToGenerate(response.listo_para_generar);
       addLog("Respuestas enviadas. Backend actualizó el análisis.", "success");
@@ -274,15 +307,23 @@ function FlowAgents({ inputData }) {
     setAnswers((prev) => ({ ...prev, [index]: value }));
   };
 
+  const isFormComplete = () => {
+    if (!preguntas || preguntas.length === 0) return false;
+    return preguntas.every((_, index) => answers[index] && answers[index].trim() !== "");
+  };
+
   const renderQuestions = () => {
     if (!preguntas || preguntas.length === 0) return null;
 
     return (
-      <section className="section-card">
+      <section className="section-card" ref={questionsRef} style={{ scrollMarginTop: '20px' }}>
         <div className="card-header">
           <div>
             <p className="section-label">Interacción</p>
-            <h3 className="section-title">Preguntas de aclaración</h3>
+            <h3 className="section-title">
+              Preguntas de aclaración
+              <span className="new-indicator" title="Nuevas preguntas disponibles">↓ NUEVAS</span>
+            </h3>
           </div>
         </div>
 
@@ -296,6 +337,7 @@ function FlowAgents({ inputData }) {
               <textarea
                 rows={3}
                 className="textarea-field"
+                placeholder="Escribe tu respuesta aquí..."
                 value={answers[index] || ""}
                 onChange={(e) => handleAnswerChange(index, e.target.value)}
                 required
@@ -303,7 +345,7 @@ function FlowAgents({ inputData }) {
             </div>
           ))}
 
-          <button type="submit" disabled={generating} className="button button-primary">
+          <button type="submit" disabled={generating || !isFormComplete()} className="button button-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M5 12h14" />
               <path d="M13 6l6 6-6 6" />
@@ -458,32 +500,49 @@ function FlowAgents({ inputData }) {
                 Error: {pipelineError}
               </div>
             ) : (
-              <ReactFlow nodes={nodes} edges={edges} fitView />
+              <ReactFlow 
+                nodes={nodes} 
+                edges={edges} 
+                fitView={{
+                  padding: 0.2,
+                  includeHiddenNodes: false,
+                  minZoom: 0.1,
+                  maxZoom: 2
+                }}
+                nodesDraggable={false}
+                nodesConnectable={false}
+                elementsSelectable={false}
+                panOnDrag={false}
+                panOnScroll={false}
+                zoomOnScroll={false}
+              />
             )}
           </div>
         </section>
 
-        <aside className="sidebar-panel">
-          {renderStatusPanel()}
-          <section className="section-card logs-timeline">
-            <div className="card-header">
-              <div>
-                <p className="section-label">Flujo y registro</p>
-                <h3 className="section-title">Timeline de eventos</h3>
+        <div className="flow-bottom-section">
+          <aside className="sidebar-panel">
+            {renderStatusPanel()}
+            <section className="section-card logs-timeline">
+              <div className="card-header">
+                <div>
+                  <p className="section-label">Flujo y registro</p>
+                  <h3 className="section-title">Timeline de eventos</h3>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M4 7h16" />
+                  <path d="M4 12h16" />
+                  <path d="M4 17h16" />
+                </svg>
               </div>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M4 7h16" />
-                <path d="M4 12h16" />
-                <path d="M4 17h16" />
-              </svg>
-            </div>
-            <p className="timeline-notice">Los logs se sincronizan con cada paso activo del flujo.</p>
-            <LogsPanel logs={logs} />
-          </section>
-        </aside>
-      </div>
+              <p className="timeline-notice">Los logs se sincronizan con cada paso activo del flujo.</p>
+              <LogsPanel logs={logs} />
+            </section>
+          </aside>
 
-      <OutputPanel resultado={resultado} rutaProyecto={rutaProyecto} loading={generating} />
+          <OutputPanel resultado={resultado} rutaProyecto={rutaProyecto} loading={generating} />
+        </div>
+      </div>
 
       {showPreview && rutaProyecto && (
         <ProjectPreview

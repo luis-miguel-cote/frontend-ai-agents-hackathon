@@ -13,13 +13,11 @@ function Dashboard() {
 
   return (
     <MainLayout>
-      <h1>🤖 AI Multi-Agent System</h1>
-
-      {/* 🔥 AQUÍ APARECE EL INPUT */}
-      <InputPanel onSubmit={handleInput} />
-
-      {/* FLOW */}
-      <FlowAgents inputData={inputData} />
+      <div className="page-container">
+        <h1 className="page-title">AI Multi-Agent System</h1>
+        <InputPanel onSubmit={handleInput} />
+        <FlowAgents inputData={inputData} />
+      </div>
     </MainLayout>
   );
 }

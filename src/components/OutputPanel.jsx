@@ -6,103 +6,88 @@ function OutputPanel({ resultado, rutaProyecto, loading }) {
     : null;
 
   return (
-    <div style={{
-      marginTop: "20px",
-      padding: "15px",
-      borderRadius: "10px",
-      background: "#020617",
-      border: "1px solid rgba(34, 211, 238, 0.2)"
-    }}>
-      <h3>📦 Output del sistema</h3>
+    <section className="section-card" style={{ marginTop: '20px' }}>
+      <div className="card-header">
+        <div>
+          <p className="section-label">Output del sistema</p>
+          <h3 className="section-title">Resultado final</h3>
+        </div>
+      </div>
 
       {loading ? (
-        <p style={{ color: "#22d3ee", animation: "pulse 1s infinite" }}>
-          🤖 Generando resultado...
-        </p>
+        <div className="status-item" style={{ alignItems: 'center', gap: '12px' }}>
+          <span className="spin-icon" role="img" aria-label="cargando">⏳</span>
+          <span>Generando resultado...</span>
+        </div>
       ) : resultado ? (
-        <div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
-            <div>
-              <p style={{ margin: "4px 0", color: "#94a3b8", fontSize: "12px" }}>Proyecto</p>
-              <p style={{ margin: 0, color: "#e2e8f0", fontWeight: "bold" }}>{resultado.nombre}</p>
-            </div>
-            <div>
-              <p style={{ margin: "4px 0", color: "#94a3b8", fontSize: "12px" }}>Tipo</p>
-              <p style={{ margin: 0, color: "#e2e8f0" }}>{resultado.tipo_proyecto || "-"}</p>
-            </div>
-            <div>
-              <p style={{ margin: "4px 0", color: "#94a3b8", fontSize: "12px" }}>Archivos generados</p>
-              <p style={{ margin: 0, color: "#e2e8f0" }}>{resultado.archivos?.length ?? 0}</p>
-            </div>
-            <div>
-              <p style={{ margin: "4px 0", color: "#94a3b8", fontSize: "12px" }}>QA</p>
-              <p style={{
-                margin: 0,
-                color: resultado.qa?.verdict === "PASS" ? "#4ade80" : "#fb7185",
-                fontWeight: "bold"
-              }}>
-                {resultado.qa?.verdict || "-"} ({resultado.qa?.pass_rate ?? 0}%)
-              </p>
+        <div className="status-summary">
+          <div className="status-item">
+            <div className="meta">Proyecto</div>
+            <div className="value">{resultado.nombre}</div>
+          </div>
+          <div className="status-item">
+            <div className="meta">Tipo</div>
+            <div className="value">{resultado.tipo_proyecto || '-'}</div>
+          </div>
+          <div className="status-item">
+            <div className="meta">Archivos generados</div>
+            <div className="value">{resultado.archivos?.length ?? 0}</div>
+          </div>
+          <div className="status-item">
+            <div className="meta">QA</div>
+            <div className="value" style={{ color: resultado.qa?.verdict === 'PASS' ? 'var(--success)' : 'var(--danger)' }}>
+              {resultado.qa?.verdict || '-'} ({resultado.qa?.pass_rate ?? 0}%)
             </div>
           </div>
 
           {resultado.archivos?.length > 0 && (
-            <details style={{ marginBottom: "12px" }}>
-              <summary style={{ cursor: "pointer", color: "#22d3ee", fontSize: "13px" }}>
+            <details style={{ marginBottom: '12px' }}>
+              <summary style={{ cursor: 'pointer', color: 'var(--accent)', fontSize: '13px' }}>
                 Ver lista de archivos ({resultado.archivos.length})
               </summary>
-              <ul style={{ marginTop: "8px", paddingLeft: "18px" }}>
+              <ul style={{ marginTop: '8px', paddingLeft: '18px' }}>
                 {resultado.archivos.map((archivo) => (
-                  <li key={archivo} style={{ fontSize: "12px", color: "#94a3b8" }}>{archivo}</li>
+                  <li key={archivo} style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{archivo}</li>
                 ))}
               </ul>
             </details>
           )}
 
           {resultado.qa?.critical_issues?.length > 0 && (
-            <details style={{ marginBottom: "12px" }}>
-              <summary style={{ cursor: "pointer", color: "#fda4af", fontSize: "13px" }}>
+            <details style={{ marginBottom: '12px' }}>
+              <summary style={{ cursor: 'pointer', color: '#fda4af', fontSize: '13px' }}>
                 Issues críticos ({resultado.qa.critical_issues.length})
               </summary>
-              <ul style={{ marginTop: "8px", paddingLeft: "18px" }}>
+              <ul style={{ marginTop: '8px', paddingLeft: '18px' }}>
                 {resultado.qa.critical_issues.map((issue, i) => (
-                  <li key={i} style={{ fontSize: "12px", color: "#fda4af" }}>{issue}</li>
+                  <li key={i} style={{ fontSize: '12px', color: '#fda4af' }}>{issue}</li>
                 ))}
               </ul>
             </details>
           )}
 
-          <div style={{ display: "flex", gap: "10px", marginTop: "14px" }}>
-            {downloadUrl && (
-              <a
-                href={downloadUrl}
-                download
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  background: "linear-gradient(135deg, #22d3ee, #4ade80)",
-                  color: "#020617",
-                  fontWeight: "bold",
-                  fontSize: "13px",
-                  textDecoration: "none",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                }}
-              >
-                ⬇ Descargar proyecto (.zip)
-              </a>
-            )}
-          </div>
+          {downloadUrl && (
+            <a
+              href={downloadUrl}
+              download
+              className="button button-secondary"
+              style={{ width: 'fit-content' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Descargar proyecto (.zip)
+            </a>
+          )}
         </div>
       ) : (
-        <p style={{ opacity: 0.5 }}>
-          Ejecuta la simulación para generar el resultado 🚀
+        <p style={{ opacity: 0.75, color: 'var(--text-muted)' }}>
+          Ejecuta la simulación para generar el resultado.
         </p>
       )}
-    </div>
+    </section>
   );
 }
 

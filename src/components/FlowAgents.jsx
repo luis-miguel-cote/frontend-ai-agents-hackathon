@@ -245,7 +245,7 @@ function FlowAgents({ inputData }) {
             setResultado(res);
             setRutaProyecto(status.ruta_proyecto || res?.nombre || null);
             setGenerating(false);
-            addLog("Generación completada ✅", "success");
+            addLog("Generación completada", "success");
           }
           if (status.estado === "error") {
             clearInterval(pollRef.current);
@@ -278,48 +278,81 @@ function FlowAgents({ inputData }) {
     if (!preguntas || preguntas.length === 0) return null;
 
     return (
-      <div style={{ marginTop: "20px", padding: "18px", background: "#0f172a", borderRadius: "12px" }}>
-        <h3>Preguntas de aclaración</h3>
-        <form onSubmit={handleAnswerSubmit}>
+      <section className="section-card">
+        <div className="card-header">
+          <div>
+            <p className="section-label">Interacción</p>
+            <h3 className="section-title">Preguntas de aclaración</h3>
+          </div>
+        </div>
+
+        <form onSubmit={handleAnswerSubmit} className="panel-grid">
           {preguntas.map((pregunta, index) => (
-            <div key={index} style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", marginBottom: "8px" }}>
-                {index + 1}. {pregunta}
-              </label>
+            <div key={index} className="question-item">
+              <div>
+                <p className="meta">Pregunta {index + 1}</p>
+                <p>{pregunta}</p>
+              </div>
               <textarea
                 rows={3}
+                className="textarea-field"
                 value={answers[index] || ""}
                 onChange={(e) => handleAnswerChange(index, e.target.value)}
-                style={{ width: "100%", borderRadius: "8px", padding: "10px" }}
                 required
               />
             </div>
           ))}
-          <button type="submit" disabled={generating} style={{ marginTop: "8px" }}>
+
+          <button type="submit" disabled={generating} className="button button-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 12h14" />
+              <path d="M13 6l6 6-6 6" />
+            </svg>
             Responder y continuar
           </button>
         </form>
-      </div>
+      </section>
     );
   };
 
   const renderStatusPanel = () => {
     return (
-      <div style={{ marginTop: "20px", display: "grid", gap: "16px" }}>
-        <div style={{ padding: "18px", background: "#0f172a", borderRadius: "12px" }}>
-          <h3>Estado del proyecto</h3>
-          <p>Sesión: {sessionId || "No iniciada"}</p>
-          <p>Fase: {progress.fase || "-"}</p>
-          <p>Porcentaje: {progress.porcentaje ?? 0}%</p>
-          <p>Archivos listos: {progress.archivos_listos?.length ?? 0}</p>
-          {preguntas?.length > 0 && <p>Preguntas abiertas: {preguntas.length}</p>}
-          {readyToGenerate && !generating && <p style={{ color: "#4ade80" }}>Listo para generar</p>}
-          {error && <p style={{ color: "#fb7185" }}>Error: {error}</p>}
+      <section className="section-card">
+        <div className="card-header">
+          <div>
+            <p className="section-label">Estado del proyecto</p>
+            <h3 className="section-title">Monitor de ejecución</h3>
+          </div>
+        </div>
+
+        <div className="status-summary">
+          <div className="status-item">
+            <div className="meta">Sesión</div>
+            <div className="value">{sessionId || "No iniciada"}</div>
+          </div>
+          <div className="status-item">
+            <div className="meta">Fase actual</div>
+            <div className="value">{progress.fase || "-"}</div>
+          </div>
+          <div className="status-item">
+            <div className="meta">Progreso</div>
+            <div className="value">{progress.porcentaje ?? 0}%</div>
+          </div>
+          <div className="status-item">
+            <div className="meta">Archivos listos</div>
+            <div className="value">{progress.archivos_listos?.length ?? 0}</div>
+          </div>
+          {preguntas?.length > 0 && (
+            <div className="status-item">
+              <div className="meta">Preguntas abiertas</div>
+              <div className="value">{preguntas.length}</div>
+            </div>
+          )}
         </div>
 
         {requerimientos && (
-          <div style={{ padding: "18px", background: "#0f172a", borderRadius: "12px" }}>
-            <h3>Requerimientos detectados</h3>
+          <div className="status-item" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+            <p className="meta">Requerimientos detectados</p>
             <p><strong>Título:</strong> {requerimientos.titulo}</p>
             <p><strong>Resumen:</strong> {requerimientos.resumen || "Sin resumen"}</p>
             <p><strong>Funcionales:</strong> {requerimientos.total_funcionales}</p>
@@ -327,93 +360,129 @@ function FlowAgents({ inputData }) {
           </div>
         )}
 
-        {resultado && (
-          <div style={{ padding: "18px", background: "#0f172a", borderRadius: "12px" }}>
-            <h3>Resultado final</h3>
-            <p><strong>Proyecto:</strong> {resultado.nombre}</p>
-            <p><strong>Tipo:</strong> {resultado.tipo_proyecto}</p>
-            <p><strong>QA:</strong> {resultado.qa?.verdict} ({resultado.qa?.pass_rate ?? 0}%)</p>
-            {resultado.archivos?.length > 0 && (
-              <div style={{ marginTop: "10px" }}>
-                <strong>Archivos generados:</strong>
-                <ul style={{ marginTop: "8px", paddingLeft: "18px" }}>
-                  {resultado.archivos.map((archivo) => (
-                    <li key={archivo} style={{ fontSize: "13px" }}>{archivo}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          {resultado.qa?.critical_issues?.length > 0 && (
-            <div style={{ marginTop: "12px", color: "#fda4af" }}>
-              <strong>Issues críticos QA:</strong>
-              <ul style={{ marginTop: "8px", paddingLeft: "18px" }}>
-                {resultado.qa.critical_issues.map((issue, index) => (
-                  <li key={index} style={{ fontSize: "13px" }}>{issue}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {resultado.qa?.warnings?.length > 0 && (
-            <div style={{ marginTop: "12px", color: "#fef08a" }}>
-              <strong>Observaciones QA:</strong>
-              <ul style={{ marginTop: "8px", paddingLeft: "18px" }}>
-                {resultado.qa.warnings.map((warning, index) => (
-                  <li key={index} style={{ fontSize: "13px" }}>{warning}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+        {error && (
+          <div className="status-item" style={{ borderColor: 'rgba(251, 113, 133, 0.25)' }}>
+            <div className="meta">Error</div>
+            <div className="value" style={{ color: 'var(--danger)' }}>{error}</div>
           </div>
         )}
-      </div>
+
+        {readyToGenerate && !generating && (
+          <div className="status-item" style={{ borderColor: 'rgba(74, 222, 128, 0.25)' }}>
+            <div className="meta">Listo para generar</div>
+            <div className="value" style={{ color: 'var(--success)' }}>Preparado</div>
+          </div>
+        )}
+      </section>
     );
   };
 
+  const currentProgressLabel = progress.fase || "Esperando ejecución";
+  const currentPercent = progress.porcentaje ?? 0;
+
   return (
-    <div>
-      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "16px" }}>
-        <button onClick={handleStart} disabled={generating} className="run-button">
-          ▶ Iniciar proyecto
+    <div className="flow-shell">
+      <div className="page-actions">
+        <button onClick={handleStart} disabled={generating} className="button button-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+          Iniciar proyecto
         </button>
         <button
           onClick={handleGenerate}
           disabled={!readyToGenerate || generating || !sessionId}
-          className="run-button"
+          className="button button-secondary"
         >
-          {generating ? "⏳ Generando proyecto..." : "🚀 Generar proyecto"}
+          {generating ? (
+            <>
+              <span className="spin-icon" role="img" aria-label="cargando">⏳</span>
+              Generando proyecto...
+            </>
+          ) : (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14" />
+                <path d="M13 6l6 6-6 6" />
+              </svg>
+              Generar proyecto
+            </>
+          )}
         </button>
-        <button onClick={resetWorkflow} disabled={generating} className="run-button">
-          🔄 Reiniciar flujo
+        <button onClick={resetWorkflow} disabled={generating} className="button button-ghost">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.11-9.78L23 10" />
+          </svg>
+          Reiniciar flujo
         </button>
         {rutaProyecto && (
-          <button onClick={() => setShowPreview(true)} className="run-button">
-            👁 Ver preview
+          <button onClick={() => setShowPreview(true)} className="button button-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M10 17l5-5-5-5" />
+            </svg>
+            Ver preview
           </button>
         )}
       </div>
 
       {renderQuestions()}
-      {renderStatusPanel()}
+      <div className="flow-layout">
+        <section className="flow-panel">
+          <div className="flow-status">
+            <div className="card-header">
+              <div>
+                <p className="section-label">Simulación</p>
+                <h3 className="section-title">Flujo de agentes</h3>
+              </div>
+              <span className="status-chip">{currentProgressLabel}</span>
+            </div>
 
+            <div className="progress-context">
+              <div className="current-step">Ejecución actual</div>
+              <div className="current-percent">{currentPercent}%</div>
+            </div>
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${currentPercent}%` }} />
+            </div>
+          </div>
 
-      <div
-        style={{
-          height: "500px",
-          background: "radial-gradient(circle at top, #020617, #000)",
-          borderRadius: "12px",
-          padding: "10px",
-        }}
-      >
-        {pipelineLoading ? (
-          <div style={{ color: "#22d3ee", textAlign: "center", marginTop: "200px" }}>Cargando pipeline...</div>
-        ) : pipelineError ? (
-          <div style={{ color: "#fb7185", textAlign: "center", marginTop: "200px" }}>Error: {pipelineError}</div>
-        ) : (
-          <ReactFlow nodes={nodes} edges={edges} fitView />
-        )}
+          <div className="flow-preview">
+            {pipelineLoading ? (
+              <div className="status-item" style={{ justifyContent: 'center', textAlign: 'center' }}>
+                <span className="spin-icon" role="img" aria-label="cargando">⏳</span>
+                Cargando pipeline...
+              </div>
+            ) : pipelineError ? (
+              <div className="status-item" style={{ justifyContent: 'center', textAlign: 'center', color: 'var(--danger)' }}>
+                Error: {pipelineError}
+              </div>
+            ) : (
+              <ReactFlow nodes={nodes} edges={edges} fitView />
+            )}
+          </div>
+        </section>
+
+        <aside className="sidebar-panel">
+          {renderStatusPanel()}
+          <section className="section-card logs-timeline">
+            <div className="card-header">
+              <div>
+                <p className="section-label">Flujo y registro</p>
+                <h3 className="section-title">Timeline de eventos</h3>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 7h16" />
+                <path d="M4 12h16" />
+                <path d="M4 17h16" />
+              </svg>
+            </div>
+            <p className="timeline-notice">Los logs se sincronizan con cada paso activo del flujo.</p>
+            <LogsPanel logs={logs} />
+          </section>
+        </aside>
       </div>
 
-      <LogsPanel logs={logs} />
       <OutputPanel resultado={resultado} rutaProyecto={rutaProyecto} loading={generating} />
 
       {showPreview && rutaProyecto && (

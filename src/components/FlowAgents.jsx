@@ -10,28 +10,17 @@ import {
   answerProjectQuestions,
   generateProject,
   getProjectStatus,
+  BASE_URL,
 } from "../services/api";
 
-const initialNodes = [
-  { id: "1", data: { label: "User" }, position: { x: 0, y: 100 } },
-  { id: "2", data: { label: "Orchestrator" }, position: { x: 200, y: 100 } },
-  { id: "3", data: { label: "Requirement" }, position: { x: 400, y: 0 } },
-  { id: "4", data: { label: "Development" }, position: { x: 400, y: 200 } },
-  { id: "5", data: { label: "QA" }, position: { x: 600, y: 100 } },
-  { id: "6", data: { label: "Output" }, position: { x: 800, y: 100 } },
-];
 
-const initialEdges = [
-  { id: "e1-2", source: "1", target: "2", animated: true },
-  { id: "e2-3", source: "2", target: "3", animated: true },
-  { id: "e2-4", source: "2", target: "4", animated: true },
-  { id: "e3-5", source: "3", target: "5", animated: true },
-  { id: "e4-5", source: "4", target: "5", animated: true },
-  { id: "e5-6", source: "5", target: "6", animated: true },
-];
+
 
 function FlowAgents({ inputData }) {
-  const [nodes, setNodes] = useState(initialNodes);
+  const [nodes, setNodes] = useState([]);
+  const [edges, setEdges] = useState([]);
+  const [pipelineLoading, setPipelineLoading] = useState(true);
+  const [pipelineError, setPipelineError] = useState(null);
   const [logs, setLogs] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [preguntas, setPreguntas] = useState([]);
@@ -46,6 +35,44 @@ function FlowAgents({ inputData }) {
   const [showPreview, setShowPreview] = useState(false);
   const pollRef = useRef(null);
   const lastFaseRef = useRef("");
+
+  // Función para recargar pipeline
+  const fetchPipeline = (showLoading = true) => {
+    if (showLoading) setPipelineLoading(true);
+    setPipelineError(null);
+    fetch(`${BASE_URL}/pipeline`)
+      .then((res) => {
+        if (!res.ok) throw new Error("No se pudo cargar el pipeline");
+        return res.json();
+      })
+      .then((data) => {
+        // Adaptar nodos al formato React Flow: { id, data: { label }, position }
+        const rfNodes = (data.nodes || []).map((n, i) => ({
+          ...n,
+          data: { label: n.label },
+          position: n.position && typeof n.position.x === 'number' && typeof n.position.y === 'number'
+            ? n.position
+            : { x: 120 * i, y: 80 * i },
+        }));
+        setNodes(rfNodes);
+        // Asegurar que cada edge tenga un id único
+        const rfEdges = (data.edges || []).map((e, i) => ({
+          ...e,
+          id: e.id ? e.id : `e-${e.source}-${e.target}-${i}`,
+        }));
+        setEdges(rfEdges);
+        if (showLoading) setPipelineLoading(false);
+      })
+      .catch((err) => {
+        setPipelineError(err.message);
+        if (showLoading) setPipelineLoading(false);
+      });
+  };
+
+  // Cargar pipeline dinámico al montar
+  useEffect(() => {
+    fetchPipeline();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -68,7 +95,8 @@ function FlowAgents({ inputData }) {
     setShowPreview(false);
     setError(null);
     setLogs([]);
-    setNodes(initialNodes);
+    // Reiniciar pipeline a lo que venga del backend
+    fetchPipeline();
     if (pollRef.current) {
       clearInterval(pollRef.current);
       pollRef.current = null;
@@ -85,7 +113,7 @@ function FlowAgents({ inputData }) {
         node.id === id
           ? {
               ...node,
-              data: { label: `${node.data.label.split(" - ")[0]} - ${status.toUpperCase()}` },
+              data: { label: `${(node.data?.label || node.label || "").split(" - ")[0]} - ${status.toUpperCase()}` },
               style: {
                 background: "#020617",
                 color: "white",
@@ -367,6 +395,7 @@ function FlowAgents({ inputData }) {
       {renderQuestions()}
       {renderStatusPanel()}
 
+
       <div
         style={{
           height: "500px",
@@ -375,11 +404,17 @@ function FlowAgents({ inputData }) {
           padding: "10px",
         }}
       >
-        <ReactFlow nodes={nodes} edges={initialEdges} fitView />
+        {pipelineLoading ? (
+          <div style={{ color: "#22d3ee", textAlign: "center", marginTop: "200px" }}>Cargando pipeline...</div>
+        ) : pipelineError ? (
+          <div style={{ color: "#fb7185", textAlign: "center", marginTop: "200px" }}>Error: {pipelineError}</div>
+        ) : (
+          <ReactFlow nodes={nodes} edges={edges} fitView />
+        )}
       </div>
 
       <LogsPanel logs={logs} />
-      <OutputPanel output={resultado ? JSON.stringify(resultado, null, 2) : ""} loading={generating} />
+      <OutputPanel resultado={resultado} rutaProyecto={rutaProyecto} loading={generating} />
 
       {showPreview && rutaProyecto && (
         <ProjectPreview

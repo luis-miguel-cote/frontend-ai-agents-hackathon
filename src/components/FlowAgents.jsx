@@ -312,6 +312,21 @@ function FlowAgents({ inputData }) {
         try {
           const status = await getProjectStatus(sessionId);
           setProgress(status.progreso || {});
+          // Sincronizar logs del backend con el estado local
+          if (status.progreso && Array.isArray(status.progreso.logs)) {
+            // Mapear logs a formato { message, type }
+            const backendLogs = status.progreso.logs.map((msg) => {
+              // Heurística simple para tipo
+              let type = "info";
+              if (msg.includes("error") || msg.includes("❌")) type = "error";
+              else if (msg.includes("warning") || msg.includes("⚠️")) type = "warning";
+              else if (msg.includes("success") || msg.includes("✅")) type = "success";
+              else if (msg.includes("completado")) type = "success";
+              else if (msg.includes("autocorrección") || msg.includes("♻️")) type = "warning";
+              return { message: msg, type };
+            });
+            setLogs(backendLogs);
+          }
           const faseActual = status.progreso?.fase || "";
           if (faseActual && faseActual !== lastFaseRef.current) {
             addLog(`Estado: ${faseActual}`, "info");

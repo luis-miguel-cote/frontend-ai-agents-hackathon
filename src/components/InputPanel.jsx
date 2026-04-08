@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import mammoth from "mammoth";
 import Tesseract from "tesseract.js";
@@ -11,7 +11,141 @@ function InputPanel({ onSubmit }) {
     const [fileUploaded, setFileUploaded] = useState(false);
     const [extractStatus, setExtractStatus] = useState(null); // null | 'success' | 'warning' | 'error'
     const [extractMsg, setExtractMsg] = useState("");
+    const [isRecording, setIsRecording] = useState(false);
+    const [voiceStatus, setVoiceStatus] = useState("");
+    const [interimText, setInterimText] = useState("");
+    const [listeningDots, setListeningDots] = useState("");
+    const recognitionRef = useRef(null);
+    const recognitionErrorRef = useRef(false);
+    const listeningIntervalRef = useRef(null);
 
+    const getSpeechRecognition = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) return null;
+        const recognition = new SpeechRecognition();
+        recognition.lang = "es-ES";
+        recognition.interimResults = true;
+        recognition.continuous = true;
+        return recognition;
+    };
+
+    const startRecording = () => {
+        const recognition = getSpeechRecognition();
+        if (!recognition) {
+            setVoiceStatus("Tu navegador no soporta reconocimiento de voz.");
+            return;
+        }
+
+        recognitionErrorRef.current = false;
+        recognitionRef.current = recognition;
+        recognition.onstart = () => {
+            setIsRecording(true);
+            setVoiceStatus("Escuchando... habla ahora");
+        };
+
+        recognition.onaudiostart = () => {
+            setVoiceStatus("Micrófono activado, procesando audio...");
+        };
+
+        recognition.onspeechstart = () => {
+            setVoiceStatus("Detectando tu voz...");
+        };
+
+        recognition.onspeechend = () => {
+            setVoiceStatus("No se detecta voz. Si quieres seguir, habla de nuevo o presiona detener.");
+        };
+
+        recognition.onresult = (event) => {
+            let interimTranscript = "";
+            let finalTranscript = "";
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const result = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += result + " ";
+                } else {
+                    interimTranscript += result + " ";
+                }
+            }
+
+            if (finalTranscript.trim().length > 0) {
+                setText((prevText) => {
+                    const updated = prevText ? `${prevText} ${finalTranscript.trim()}` : finalTranscript.trim();
+                    return updated;
+                });
+                setInterimText("");
+                setVoiceStatus("Transcripción agregada al texto.");
+            } else if (interimTranscript.trim().length > 0) {
+                setVoiceStatus(`Escuchando... ${interimTranscript.trim()}`);
+                setInterimText(interimTranscript.trim());
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.error("SpeechRecognition error", event);
+            recognitionErrorRef.current = true;
+            if (listeningIntervalRef.current) {
+                clearInterval(listeningIntervalRef.current);
+                listeningIntervalRef.current = null;
+                setListeningDots("");
+            }
+            const msg = event.error === 'not-allowed'
+                ? 'Permiso de micrófono denegado. Verifica la configuración del navegador.'
+                : event.error === 'no-speech'
+                ? 'No se detectó voz. Intenta hablar más claro o verifica el micrófono.'
+                : 'Error en el reconocimiento de voz. Intenta nuevamente.';
+            setVoiceStatus(msg);
+            setIsRecording(false);
+        };
+
+        recognition.onnomatch = () => {
+            setVoiceStatus("No se pudo reconocer el audio. Intenta de nuevo.");
+        };
+
+        recognition.onend = () => {
+            if (listeningIntervalRef.current) {
+                clearInterval(listeningIntervalRef.current);
+                listeningIntervalRef.current = null;
+                setListeningDots("");
+            }
+            setIsRecording(false);
+            if (!recognitionErrorRef.current) {
+                setVoiceStatus("Grabación detenida. Verifica el texto y envía.");
+            }
+        };
+
+        try {
+            setVoiceStatus("Iniciando micrófono...");
+            if (listeningIntervalRef.current) {
+                clearInterval(listeningIntervalRef.current);
+            }
+            listeningIntervalRef.current = setInterval(() => {
+                setListeningDots((prev) => {
+                    const next = prev.length < 3 ? `${prev}.` : "";
+                    setVoiceStatus(`Escuchando${next}`);
+                    return next;
+                });
+            }, 500);
+            recognition.start();
+        } catch (error) {
+            console.error("SpeechRecognition start failed", error);
+            if (listeningIntervalRef.current) {
+                clearInterval(listeningIntervalRef.current);
+                listeningIntervalRef.current = null;
+                setListeningDots("");
+            }
+            setVoiceStatus("No se pudo iniciar el reconocimiento de voz. Intenta otra vez.");
+            setIsRecording(false);
+        }
+    };
+
+    const stopRecording = () => {
+        const recognition = recognitionRef.current;
+        if (recognition) {
+            recognition.stop();
+            recognitionRef.current = null;
+        }
+    };
 
     const handleFile = async (file) => {
         if (!file) return;
@@ -187,6 +321,20 @@ function InputPanel({ onSubmit }) {
                         onChange={(e) => setText(e.target.value)}
                     />
 
+                    {interimText && (
+                        <div style={{
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            background: 'rgba(56, 189, 248, 0.1)',
+                            border: '1px solid rgba(6, 182, 212, 0.3)',
+                            color: '#0ea5e9',
+                            fontSize: '0.95rem',
+                            marginTop: '4px'
+                        }}>
+                            <strong>Transcripción en curso:</strong> {interimText}
+                        </div>
+                    )}
+
                     {fileUploaded && fileName && (
                         <div style={{
                             padding: '12px 14px',
@@ -211,21 +359,37 @@ function InputPanel({ onSubmit }) {
                     )}
                 </div>
 
-                <div className="layout-grid columns-2" style={{ alignItems: "end" }}>
-                    <label className="file-input">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M16 16v5H8v-5" />
-                          <path d="M12 12v9" />
-                          <path d="M20 8v-2a2 2 0 0 0-2-2h-8l-4 4v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
-                          <path d="M16 2v4h4" />
-                        </svg>
-                        Seleccionar archivo
-                        <input
-                            type="file"
-                            accept=".pdf,.docx,.txt,.png,.jpg,.jpeg"
-                            onChange={(e) => handleFile(e.target.files[0])}
-                        />
-                    </label>
+                <div className="layout-grid columns-2" style={{ alignItems: "end", gap: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <label className="file-input">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M16 16v5H8v-5" />
+                              <path d="M12 12v9" />
+                              <path d="M20 8v-2a2 2 0 0 0-2-2h-8l-4 4v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
+                              <path d="M16 2v4h4" />
+                            </svg>
+                            Seleccionar archivo
+                            <input
+                                type="file"
+                                accept=".pdf,.docx,.txt,.png,.jpg,.jpeg"
+                                onChange={(e) => handleFile(e.target.files[0])}
+                            />
+                        </label>
+
+                        <button
+                            type="button"
+                            className={`button ${isRecording ? 'button-secondary' : 'button-outline'}`}
+                            onClick={isRecording ? stopRecording : startRecording}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                              <path d="M19 10a7 7 0 0 1-14 0" />
+                              <path d="M12 19v4" />
+                              <path d="M8 23h8" />
+                            </svg>
+                            {isRecording ? 'Detener grabación' : 'Grabar audio'}
+                        </button>
+                    </div>
 
                     <button type="submit" disabled={!isReadyToSubmit} className="button button-primary">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -236,8 +400,15 @@ function InputPanel({ onSubmit }) {
                     </button>
                 </div>
 
+                {voiceStatus && (
+                    <p className="helper-text" style={{ color: '#0ea5e9' }}>
+                        {voiceStatus}
+                    </p>
+                )}
+
                 <p className="helper-text">
-                    Formatos soportados: PDF, Word (.docx), TXT, JPG, PNG. {fileUploaded && text ? 'El archivo se ha cargado correctamente.' : ''}
+                    Formatos soportados: PDF, Word (.docx), TXT, JPG, PNG. También puedes grabar tu requerimiento con el micrófono y transcribirlo directo al campo de texto.
+                    {fileUploaded && text ? ' El archivo se ha cargado correctamente.' : ''}
                 </p>
             </form>
         </section>

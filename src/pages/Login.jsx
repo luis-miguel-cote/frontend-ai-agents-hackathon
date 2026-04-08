@@ -10,7 +10,7 @@ function Login() {
     const handleLogin = (e) => {
         e.preventDefault();
 
-        if (email === "admin@test.com" && password === "1234") {
+        if (email === "usuario_demo@test.com" && password === "demohackatonciadetabril2026") {
             localStorage.setItem("user", email);
             navigate("/dashboard");
         } else {
@@ -41,8 +41,6 @@ function Login() {
                 <button type="submit" className="button">
                     Ingresar
                 </button>
-
-                <small>demo: admin@test.com / 1234</small>
             </form>
         </div>
     );

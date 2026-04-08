@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BASE_URL, readProjectFile } from "../services/api";
+import { BASE_URL } from "../services/api";
 import "../styles/ProjectPreview.css";
 
 function ProjectPreview({ projectName, onClose }) {
@@ -23,7 +23,7 @@ function ProjectPreview({ projectName, onClose }) {
         const proyecto = (data.proyectos || []).find((p) => p.nombre === projectName);
         setFileList(proyecto ? proyecto.archivos : []);
       });
-  }, [projectName]);
+  }, [projectName, previewUrl]);
 
   return (
     <div className={`preview-overlay ${isFullscreen ? "preview-fullscreen" : ""}`}>

@@ -5,6 +5,7 @@ import "../styles/FlowAgents.css";
 import LogsPanel from "./LogsPanel";
 import OutputPanel from "./OutputPanel";
 import ProjectPreview from "./ProjectPreview";
+import VoiceConversation from "./VoiceConversation";
 import {
   startProject,
   answerProjectQuestions,
@@ -27,9 +28,15 @@ function FlowAgents({ inputData }) {
   const [answers, setAnswers] = useState({});
   const [requerimientos, setRequerimientos] = useState(null);
   const [readyToGenerate, setReadyToGenerate] = useState(false);
+  const [readyMessage, setReadyMessage] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState({ fase: "Esperando", porcentaje: 0, archivos_listos: [] });
   const [resultado, setResultado] = useState(null);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [voiceSubmitting, setVoiceSubmitting] = useState(false);
+  const [voiceError, setVoiceError] = useState(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [error, setError] = useState(null);
   const [rutaProyecto, setRutaProyecto] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -76,6 +83,43 @@ function FlowAgents({ inputData }) {
     fetchPipeline();
   }, []);
 
+  // Si hay error en el pipeline, mostrar un pipeline básico por defecto
+  useEffect(() => {
+    if (pipelineError) {
+      // Pipeline básico por defecto
+      const defaultNodes = [
+        { id: "1", label: "User", position: { x: 100, y: 100 } },
+        { id: "2", label: "Orchestrator", position: { x: 300, y: 100 } },
+        { id: "3", label: "Requirement", position: { x: 500, y: 100 } },
+        { id: "4", label: "Development", position: { x: 300, y: 250 } },
+        { id: "5", label: "QA", position: { x: 500, y: 250 } },
+        { id: "6", label: "Output", position: { x: 700, y: 175 } },
+      ];
+      const defaultEdges = [
+        { id: "e1-2", source: "1", target: "2" },
+        { id: "e2-3", source: "2", target: "3" },
+        { id: "e2-4", source: "2", target: "4" },
+        { id: "e3-5", source: "3", target: "5" },
+        { id: "e4-5", source: "4", target: "5" },
+        { id: "e5-6", source: "5", target: "6" },
+      ];
+      setNodes(defaultNodes);
+      setEdges(defaultEdges);
+      setPipelineLoading(false);
+    }
+  }, [pipelineError]);
+
+  useEffect(() => {
+    const hasSpeechSynthesis = typeof window !== "undefined" && typeof window.speechSynthesis !== "undefined";
+    const hasSpeechRecognition = typeof window !== "undefined" &&
+      (typeof window.SpeechRecognition !== "undefined" || typeof window.webkitSpeechRecognition !== "undefined");
+    setVoiceSupported(hasSpeechSynthesis && hasSpeechRecognition);
+  }, []);
+
+  useEffect(() => {
+    setCurrentQuestionIndex(0);
+  }, [preguntas]);
+
   useEffect(() => {
     return () => {
       if (pollRef.current) {
@@ -104,6 +148,7 @@ function FlowAgents({ inputData }) {
     setRutaProyecto(null);
     setShowPreview(false);
     setError(null);
+    setReadyMessage(null);
     setLogs([]);
     // Reiniciar pipeline a lo que venga del backend
     fetchPipeline();
@@ -189,9 +234,11 @@ function FlowAgents({ inputData }) {
       if (response.preguntas?.length > 0) {
         addLog(`Se han detectado ${response.preguntas.length} preguntas de aclaración.`, "warning");
         updateNodeStatus("3", "processing");
+        setReadyMessage(null);
       } else {
         addLog("Ya está listo para generar el proyecto.", "success");
         updateNodeStatus("3", "done");
+        setReadyMessage("¡Perfecto! Los requerimientos están completos. Ya puedes generar el proyecto.");
       }
     } catch (err) {
       setError(err.message);
@@ -238,6 +285,7 @@ function FlowAgents({ inputData }) {
       updateNodeStatus("3", response.preguntas?.length > 0 ? "processing" : "done");
       if (response.preguntas?.length === 0) {
         addLog("Listo para generar.", "success");
+        setReadyMessage("¡Genial! Has respondido todas las preguntas. Ahora puedes generar el proyecto.");
       }
     } catch (err) {
       setError(err.message);
@@ -307,6 +355,64 @@ function FlowAgents({ inputData }) {
     setAnswers((prev) => ({ ...prev, [index]: value }));
   };
 
+  const handleVoiceAnswerSubmit = async (answerText) => {
+    if (!sessionId) return;
+    if (!answerText || answerText.trim().length === 0) {
+      setVoiceError("No se ha detectado ninguna respuesta válida.");
+      return;
+    }
+
+    setVoiceError(null);
+    const trimmedAnswer = answerText.trim();
+    const updatedAnswers = {
+      ...answers,
+      [currentQuestionIndex]: trimmedAnswer,
+    };
+    setAnswers(updatedAnswers);
+
+    const nextQuestionIndex = preguntas.findIndex((_, index) => !updatedAnswers[index]?.trim());
+    const allAnswered = nextQuestionIndex === -1;
+
+    if (!allAnswered) {
+      setCurrentQuestionIndex(nextQuestionIndex);
+      return;
+    }
+
+    setVoiceSubmitting(true);
+    addLog("Enviando respuestas por voz al backend...", "info");
+
+    try {
+      const respuestasObj = {};
+      preguntas.forEach((_, index) => {
+        respuestasObj[String(index)] = updatedAnswers[index] || "";
+      });
+
+      const response = await answerProjectQuestions(sessionId, { respuestas: respuestasObj });
+      setVoiceError(null);
+      setAnswers({});
+      setCurrentQuestionIndex(0);
+      setPreguntas(response.preguntas || []);
+      setReadyToGenerate(response.listo_para_generar);
+      if (response.preguntas?.length > 0) {
+        newQuestionsRef.current = true;
+        addLog("El backend devolvió una nueva pregunta de aclaración.", "warning");
+        setReadyMessage(null);
+      } else {
+        addLog("No hay más preguntas. Listo para continuar con el flujo.", "success");
+        setReadyMessage("¡Excelente! Todas las preguntas han sido respondidas. El proyecto está listo para generarse.");
+      }
+      updateNodeStatus("3", response.preguntas?.length > 0 ? "processing" : "done");
+      if (response.action === "repetir_pregunta") {
+        setVoiceError("El sistema sugiere repetir la pregunta. Intenta nuevamente.");
+      }
+    } catch (err) {
+      setVoiceError(err.message);
+      addLog(`Error en /proyecto/${sessionId}/responder: ${err.message}`, "error");
+    } finally {
+      setVoiceSubmitting(false);
+    }
+  };
+
   const isFormComplete = () => {
     if (!preguntas || preguntas.length === 0) return false;
     return preguntas.every((_, index) => answers[index] && answers[index].trim() !== "");
@@ -317,7 +423,7 @@ function FlowAgents({ inputData }) {
 
     return (
       <section className="section-card" ref={questionsRef} style={{ scrollMarginTop: '20px' }}>
-        <div className="card-header">
+        <div className="card-header" style={{ alignItems: 'center', gap: '12px' }}>
           <div>
             <p className="section-label">Interacción</p>
             <h3 className="section-title">
@@ -325,34 +431,102 @@ function FlowAgents({ inputData }) {
               <span className="new-indicator" title="Nuevas preguntas disponibles">↓ NUEVAS</span>
             </h3>
           </div>
+          <div className="voice-toggle-controls">
+            <button
+              type="button"
+              onClick={() => setVoiceMode((prev) => !prev)}
+              className={voiceMode ? "button button-secondary" : "button button-primary"}
+              disabled={!voiceSupported}
+            >
+              {voiceMode ? "Modo voz activado" : "Usar modo voz"}
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleAnswerSubmit} className="panel-grid">
-          {preguntas.map((pregunta, index) => (
-            <div key={index} className="question-item">
-              <div>
-                <p className="meta">Pregunta {index + 1}</p>
-                <p>{pregunta}</p>
-              </div>
-              <textarea
-                rows={3}
-                className="textarea-field"
-                placeholder="Escribe tu respuesta aquí..."
-                value={answers[index] || ""}
-                onChange={(e) => handleAnswerChange(index, e.target.value)}
-                required
-              />
+        {!voiceSupported && (
+          <div className="status-item" style={{ marginTop: '12px', borderColor: 'rgba(148, 163, 184, 0.25)' }}>
+            <div className="meta">Compatibilidad de voz</div>
+            <div className="value">
+              Tu navegador no soporta la API de voz completa. Usa el modo de texto o prueba en Chrome.
             </div>
-          ))}
+          </div>
+        )}
 
-          <button type="submit" disabled={generating || !isFormComplete()} className="button button-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M5 12h14" />
-              <path d="M13 6l6 6-6 6" />
-            </svg>
-            Responder y continuar
-          </button>
-        </form>
+        {voiceMode ? (
+          <>
+            <VoiceConversation
+              question={preguntas[currentQuestionIndex]}
+              questionIndex={currentQuestionIndex + 1}
+              totalQuestions={preguntas.length}
+              onSubmitAnswer={handleVoiceAnswerSubmit}
+              voiceEnabled={voiceMode}
+              isProcessing={voiceSubmitting}
+            />
+            <form onSubmit={handleAnswerSubmit} className="panel-grid" style={{ marginTop: '16px' }}>
+              {preguntas.map((pregunta, index) => (
+                <div
+                  key={index}
+                  className={`question-item ${index === currentQuestionIndex ? 'current-question' : ''}`}
+                >
+                  <div>
+                    <p className="meta">Pregunta {index + 1}</p>
+                    <p>{pregunta}</p>
+                  </div>
+                  <textarea
+                    rows={3}
+                    className="textarea-field"
+                    placeholder="Escribe tu respuesta aquí..."
+                    value={answers[index] || ""}
+                    onChange={(e) => handleAnswerChange(index, e.target.value)}
+                    required
+                  />
+                </div>
+              ))}
+
+              <button type="submit" disabled={generating || !isFormComplete()} className="button button-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M5 12h14" />
+                  <path d="M13 6l6 6-6 6" />
+                </svg>
+                Responder y continuar
+              </button>
+            </form>
+          </>
+        ) : (
+          <form onSubmit={handleAnswerSubmit} className="panel-grid">
+            {preguntas.map((pregunta, index) => (
+              <div key={index} className="question-item">
+                <div>
+                  <p className="meta">Pregunta {index + 1}</p>
+                  <p>{pregunta}</p>
+                </div>
+                <textarea
+                  rows={3}
+                  className="textarea-field"
+                  placeholder="Escribe tu respuesta aquí..."
+                  value={answers[index] || ""}
+                  onChange={(e) => handleAnswerChange(index, e.target.value)}
+                  required
+                />
+              </div>
+            ))}
+
+            <button type="submit" disabled={generating || !isFormComplete()} className="button button-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14" />
+                <path d="M13 6l6 6-6 6" />
+              </svg>
+              Responder y continuar
+            </button>
+          </form>
+        )}
+
+        {readyMessage && (
+          <div className="status-item" style={{ marginTop: '12px', borderColor: 'rgba(34, 197, 94, 0.35)', background: 'rgba(34, 197, 94, 0.08)' }}>
+            <div className="meta">Estado de requerimientos</div>
+            <div className="value" style={{ color: 'var(--success)', fontWeight: '600' }}>{readyMessage}</div>
+          </div>
+        )}
       </section>
     );
   };
@@ -424,6 +598,14 @@ function FlowAgents({ inputData }) {
 
   return (
     <div className="flow-shell">
+      {!voiceSupported && (
+        <div className="status-item" style={{ marginBottom: '18px', borderColor: 'rgba(148, 163, 184, 0.25)', background: 'rgba(244, 63, 94, 0.06)' }}>
+          <div className="meta">Modo voz</div>
+          <div className="value" style={{ color: '#f97316' }}>
+            La API de voz no está disponible en este navegador. Prueba en Chrome o usa el modo de texto.
+          </div>
+        </div>
+      )}
       <div className="page-actions">
         <button onClick={handleStart} disabled={generating} className="button button-primary">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

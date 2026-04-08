@@ -16,7 +16,7 @@ function Dashboard() {
       <div className="page-container">
         <h1 className="page-title">AI Multi-Agent System</h1>
         <InputPanel onSubmit={handleInput} />
-        <FlowAgents inputData={inputData} />
+        {inputData && <FlowAgents inputData={inputData} />}
       </div>
     </MainLayout>
   );

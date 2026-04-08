@@ -14,7 +14,7 @@ const safeFetch = async (path, options = {}) => {
     try {
       const errorJson = JSON.parse(errorText);
       errorText = errorJson.detail || errorJson.message || JSON.stringify(errorJson);
-    } catch (_error) {
+    } catch (_) {
       // mantener el texto original si no es JSON
     }
     throw new Error(`${response.status} - ${errorText}`);
@@ -30,10 +30,15 @@ export const startProject = async (descripcion) => {
   });
 };
 
-export const answerProjectQuestions = async (sessionId, respuestas) => {
+export const answerProjectQuestions = async (sessionId, payload) => {
+  const bodyPayload =
+    payload && (payload.respuestas !== undefined || payload.respuesta !== undefined)
+      ? payload
+      : { respuestas: payload };
+
   return safeFetch(`/proyecto/${sessionId}/responder`, {
     method: "POST",
-    body: JSON.stringify({ respuestas }),
+    body: JSON.stringify(bodyPayload),
   });
 };
 

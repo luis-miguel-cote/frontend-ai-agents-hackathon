@@ -1,18 +1,50 @@
-# React + Vite
+# Gemelo Digital – Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend en React para el generador de proyectos web con agentes de IA.
 
-Currently, two official plugins are available:
+## Descripción
+Interfaz visual para interactuar con el backend de Gemelo Digital. Permite iniciar sesión, crear proyectos, responder preguntas de aclaración, visualizar el flujo de agentes y descargar documentación generada.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Requisitos
+- Node.js 18+
+- npm o yarn
+- Tener el backend corriendo (ver instrucciones en el repo backend)
 
-## React Compiler
+## Instalación y uso
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+```bash
+# 1. Clona el repositorio
+git clone https://github.com/luis-miguel-cote/frontend-ai-agents-hackathon.git
+cd frontend-ai-agents-hackathon
 
-Note: This will impact Vite dev & build performances.
+# 2. Instala dependencias
+npm install
+# o
+yarn install
 
-## Expanding the ESLint configuration
+# 3. Inicia la app en modo desarrollo
+npm run dev
+# o
+yarn dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+La app estará disponible en `http://localhost:5173` (o el puerto que indique Vite).
+
+## Conexión con el backend
+Asegúrate de que el backend esté corriendo en `http://localhost:8000` (o el puerto configurado). Si usas otra URL, actualiza las rutas de la API en los servicios del frontend (`src/services/`).
+
+## Inicio de sesión de prueba
+- Usuario: `usuario_demo@test.com`
+- Contraseña: `demohackatonciadetabril2026`
+
+## Funcionalidades principales
+- Login y control de sesión
+- Creación de proyectos web mediante agentes de IA
+- Visualización del pipeline y timeline de eventos
+- Descarga de documentación y logs en PDF
+
+## Personalización
+Puedes modificar estilos en `src/styles/` y componentes en `src/components/`.
+
+## Licencia
+MIT

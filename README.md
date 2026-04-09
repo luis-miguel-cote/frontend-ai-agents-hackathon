@@ -1,5 +1,10 @@
 # Gemelo Digital – Frontend
 
+## Demo en video
+
+Mira el funcionamiento completo del sistema en este video de YouTube:
+[![Demo en YouTube](https://img.shields.io/badge/Ver%20demo%20en%20YouTube-red?logo=youtube)](https://youtu.be/8BS_5ewmwf0)
+
 Frontend en React para el generador de proyectos web con agentes de IA.
 
 ## Descripción
